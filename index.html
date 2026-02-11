@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hành trình Tiến hóa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #0f172a;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .stage-zone {
+            transition: all 0.3s ease;
+            border: 2px dashed rgba(255,255,255,0.2);
+        }
+        .stage-zone.drag-over {
+            background: rgba(255,255,255,0.1);
+            border-color: #38bdf8;
+            transform: scale(1.02);
+        }
+        .draggable-item {
+            cursor: grab;
+            transition: transform 0.2s;
+            user-select: none;
+        }
+        .draggable-item:active {
+            cursor: grabbing;
+        }
+        .success-flash {
+            animation: flash 0.5s ease-out;
+        }
+        @keyframes flash {
+            0% { background: transparent; }
+            50% { background: rgba(34, 197, 94, 0.3); }
+            100% { background: transparent; }
+        }
+        .evolution-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+        }
+        .particle {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.2;
+            pointer-events: none;
+        }
+        sub {
+            font-size: 0.75em;
+            line-height: 0;
+            position: relative;
+            vertical-align: baseline;
+            bottom: -0.2em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="evolution-bg" id="bg"></div>
+
+<div class="container mx-auto px-4 h-screen flex flex-col items-center py-8">
+    <header class="text-center mb-6">
+        <h1 class="text-4xl font-bold text-sky-400 mb-2">HÀNH TRÌNH TIẾN HÓA</h1>
+        <p class="text-gray-400">Kéo các thực thể vào đúng giai đoạn phát triển của Trái Đất</p>
+    </header>
+
+    <div class="flex justify-between w-full max-w-6xl gap-4 mb-8">
+        <!-- Giai đoạn 1 -->
+        <div id="zone-1" class="stage-zone flex-1 bg-slate-800/50 p-6 rounded-2xl flex flex-col items-center min-h-[300px]" data-stage="chemical">
+            <h2 class="text-xl font-bold text-yellow-400 mb-4 text-center uppercase text-balance">1. Tiến hóa hóa học</h2>
+            <div class="text-xs text-gray-400 mb-4 text-center italic">Vô cơ → Hữu cơ đơn giản → Đại phân tử</div>
+            <div class="item-slot w-full flex flex-wrap gap-2 justify-center content-start flex-grow"></div>
+        </div>
+
+        <!-- Giai đoạn 2 -->
+        <div id="zone-2" class="stage-zone flex-1 bg-slate-800/50 p-6 rounded-2xl flex flex-col items-center min-h-[300px]" data-stage="prebiological">
+            <h2 class="text-xl font-bold text-orange-400 mb-4 text-center uppercase text-balance">2. Tiến hóa tiền sinh học</h2>
+            <div class="text-xs text-gray-400 mb-4 text-center italic">Đại phân tử → Tế bào sơ khai</div>
+            <div class="item-slot w-full flex flex-wrap gap-2 justify-center content-start flex-grow"></div>
+        </div>
+
+        <!-- Giai đoạn 3 -->
+        <div id="zone-3" class="stage-zone flex-1 bg-slate-800/50 p-6 rounded-2xl flex flex-col items-center min-h-[300px]" data-stage="biological">
+            <h2 class="text-xl font-bold text-green-400 mb-4 text-center uppercase text-balance">3. Tiến hóa sinh học</h2>
+            <div class="text-xs text-gray-400 mb-4 text-center italic">Tế bào đầu tiên → Sinh giới đa dạng</div>
+            <div class="item-slot w-full flex flex-wrap gap-2 justify-center content-start flex-grow"></div>
+        </div>
+    </div>
+
+    <!-- Danh sách các thẻ -->
+    <div class="w-full max-w-4xl bg-white/5 p-6 rounded-3xl backdrop-blur-sm border border-white/10">
+        <div id="items-container" class="flex flex-wrap gap-4 justify-center">
+            <!-- Dữ liệu được nạp từ JS -->
+        </div>
+    </div>
+
+    <div id="score-board" class="mt-8 text-2xl font-semibold text-white">
+        Tiến độ: <span id="completed-count">0</span> / 12
+    </div>
+
+    <div id="victory-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center hidden z-50">
+        <div class="bg-slate-800 p-10 rounded-3xl text-center border-2 border-green-500 max-w-md shadow-2xl">
+            <h2 class="text-6xl mb-4">🏆</h2>
+            <h3 class="text-3xl font-bold text-white mb-4">CHÚC MỪNG!</h3>
+            <p class="text-gray-300 mb-6">Bạn đã hoàn thành xuất sắc thử thách phân loại các giai đoạn tiến hóa.</p>
+            <button onclick="resetGame()" class="bg-green-600 hover:bg-green-500 text-white px-8 py-3 rounded-full font-bold transition-all transform hover:scale-105">Làm lại</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const gameData = [
+        { id: 1, text: "Amino acid", stage: "chemical", color: "bg-blue-500" },
+        { id: 2, text: "Hơi nước, CH<sub>4</sub>, NH<sub>3</sub>", stage: "chemical", color: "bg-blue-600" },
+        { id: 3, text: "Nucleotide", stage: "chemical", color: "bg-sky-500" },
+        { id: 4, text: "Protein", stage: "chemical", color: "bg-indigo-500" },
+        { id: 5, text: "Giọt Coaxerva", stage: "prebiological", color: "bg-orange-500" },
+        { id: 6, text: "Màng sinh học sơ khai", stage: "prebiological", color: "bg-orange-600" },
+        { id: 7, text: "Tế bào sơ khai (Protobiont)", stage: "prebiological", color: "bg-amber-500" },
+        { id: 8, text: "Sự xuất hiện RNA và DNA", stage: "prebiological", color: "bg-amber-600" },
+        { id: 9, text: "Vi khuẩn cổ", stage: "biological", color: "bg-green-500" },
+        { id: 10, text: "Tảo đơn bào", stage: "biological", color: "bg-green-600" },
+        { id: 11, text: "Thực vật hạt kín", stage: "biological", color: "bg-emerald-500" },
+        { id: 12, text: "Loài người", stage: "biological", color: "bg-emerald-600" }
+    ];
+
+    let completed = 0;
+    const itemsContainer = document.getElementById('items-container');
+    const zones = document.querySelectorAll('.stage-zone');
+    const completedDisplay = document.getElementById('completed-count');
+
+    function initGame() {
+        completed = 0;
+        completedDisplay.innerText = "0";
+        itemsContainer.innerHTML = '';
+        document.getElementById('victory-modal').classList.add('hidden');
+        
+        zones.forEach(zone => {
+            zone.querySelector('.item-slot').innerHTML = '';
+        });
+
+        const shuffled = [...gameData].sort(() => Math.random() - 0.5);
+
+        shuffled.forEach(item => {
+            const div = document.createElement('div');
+            div.className = `draggable-item ${item.color} px-4 py-2 rounded-lg text-sm font-medium shadow-lg hover:brightness-110 active:scale-95 transition-all`;
+            div.innerHTML = item.text; 
+            div.draggable = true;
+            div.dataset.id = item.id;
+            div.id = `item-${item.id}`;
+            
+            div.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', item.id);
+                setTimeout(() => div.classList.add('opacity-0'), 0);
+            });
+
+            div.addEventListener('dragend', () => {
+                div.classList.remove('opacity-0');
+            });
+
+            itemsContainer.appendChild(div);
+        });
+    }
+
+    zones.forEach(zone => {
+        zone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            zone.classList.add('drag-over');
+        });
+
+        zone.addEventListener('dragleave', () => {
+            zone.classList.remove('drag-over');
+        });
+
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            const itemId = e.dataTransfer.getData('text/plain');
+            const item = gameData.find(d => d.id == itemId);
+            const targetStage = zone.dataset.stage;
+
+            if (item.stage === targetStage) {
+                const element = document.getElementById(`item-${itemId}`);
+                zone.querySelector('.item-slot').appendChild(element);
+                element.draggable = false;
+                element.classList.remove('cursor-grab', 'active:scale-95');
+                element.classList.add('cursor-default', 'scale-90');
+                
+                zone.classList.add('success-flash');
+                setTimeout(() => zone.classList.remove('success-flash'), 500);
+
+                completed++;
+                completedDisplay.innerText = completed;
+                checkVictory();
+            } else {
+                zone.classList.add('bg-red-900/40');
+                setTimeout(() => zone.classList.remove('bg-red-900/40'), 300);
+            }
+        });
+    });
+
+    function checkVictory() {
+        if (completed === gameData.length) {
+            setTimeout(() => {
+                document.getElementById('victory-modal').classList.remove('hidden');
+            }, 500);
+        }
+    }
+
+    function resetGame() {
+        initGame();
+    }
+
+    const bg = document.getElementById('bg');
+    for(let i=0; i<40; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const size = Math.random() * 3 + 1;
+        p.style.width = size + 'px';
+        p.style.height = size + 'px';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.top = Math.random() * 100 + '%';
+        bg.appendChild(p);
+    }
+
+    window.onload = initGame;
+</script>
+
+</body>
+</html>
